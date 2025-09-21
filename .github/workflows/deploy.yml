@@ -73,7 +73,7 @@ jobs:
           npm run sls:deploy
       - name: Generate Env Config
         run: |
-          aws cloudformation describe-stacks --stack-name zets-${ENV_NAME}-stack --query "Stacks[0].Outputs" > env-config.json
+          aws cloudformation describe-stacks --stack-name uptime-monitoring-${ENV_NAME}-stack --query "Stacks[0].Outputs" > env-config.json
 
       - name: Upload env-config artifact
         uses: actions/upload-artifact@v4

@@ -44,7 +44,7 @@ Resources:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       UserPoolId: !Ref CognitoUserPool
-      Domain: ${self:custom.base}-zets
+      Domain: ${self:custom.base}-uptime-monitoring
   UserPoolUsersGroup:
     Type: AWS::Cognito::UserPoolGroup
     Properties:
