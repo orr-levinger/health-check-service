@@ -1,0 +1,67 @@
+Resources:
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      Policies:
+        PasswordPolicy:
+          RequireLowercase: false
+          RequireSymbols: false
+          MinimumLength: 7
+          RequireUppercase: false
+          RequireNumbers: false
+      UserPoolName: ${self:custom.base}-user-pool
+      UsernameConfiguration:
+        CaseSensitive: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+  CognitoUserPoolClientWeb:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlows:
+        - code
+      ClientName: ${self:custom.base}-user-pool-client-web
+      UserPoolId: !Ref CognitoUserPool
+      CallbackURLs:
+        - http://localhost:3000/
+      LogoutURLs:
+        - http://localhost:3000/
+      SupportedIdentityProviders:
+        - COGNITO
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Domain: ${self:custom.base}-zets
+  UserPoolUsersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Description: The group for regular app users
+      GroupName: Users
+      UserPoolId: !Ref CognitoUserPool
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    DependsOn:
+      - CognitoUserPool
+    Properties:
+      Name: CognitoUserPoolAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ProviderARNs:
+        - Fn::GetAtt:
+            - CognitoUserPool
+            - Arn

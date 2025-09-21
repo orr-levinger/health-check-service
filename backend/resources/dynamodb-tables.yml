@@ -1,0 +1,35 @@
+Resources:
+  GithubReposTable:
+    DeletionPolicy: Delete
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      Tags:
+        - Key: env
+          Value: ${sls:stage}
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: stars
+          AttributeType: N
+        - AttributeName: id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: stars
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: byId
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+      TableName: ${self:custom.base}-repos
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES

@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "es2021",
+      "es2022.error"
+    ],
+    "sourceMap": true,
+    "target": "es2021",
+    "outDir": "out",
+    "emitDecoratorMetadata": true,
+    "paths": {
+      "@functions/*": ["backend/src/functions/*"],
+      "@dynamo/*": ["backend/src/dynamo/*"],
+      "@model/*": ["backend/src/model/*"],
+      "@service/*": ["backend/src/service/*"],
+      "@store/*": ["backend/src/store/*"],
+      "@static/*": ["backend/src/static/*"],
+      "@lib/*": ["backend/src/lib/*"],
+      "@type/*": ["backend/src/types/*"],
+      "@common/*": ["backend/src/common/*"],
+    }
+  }
+}

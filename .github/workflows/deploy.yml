@@ -1,0 +1,154 @@
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_PROFILE: default
+  ENV: dev
+  ENV_NAME: dev
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-20.04
+    environment:
+      name: dev
+    env:
+      AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
+      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      AWS_EC2_METADATA_DISABLED: true
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.18.0'
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Prepare AWS credentials
+        run: |
+          mkdir ~/.aws
+          echo -e "[${AWS_PROFILE}]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
+          cat ~/.aws/credentials
+
+      - name: Deploy backend environment
+        run: |
+          echo ENV_NAME=${ENV_NAME}
+          cd backend
+          npm run sls:deploy
+      - name: Generate Env Config
+        run: |
+          aws cloudformation describe-stacks --stack-name zets-${ENV_NAME}-stack --query "Stacks[0].Outputs" > env-config.json
+
+      - name: Upload env-config artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: env-config
+          path: env-config.json
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-20.04
+    environment:
+      name: dev
+    env:
+      AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
+      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      WEBAPP_BUCKET: ${{vars.WEBAPP_BUCKET}}
+      AWS_EC2_METADATA_DISABLED: true
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download env-config artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: env-config
+
+      - name: Install jq
+        run: sudo apt-get install jq
+
+      - name: Convert JSON to .env format and move to frontend
+        run: |
+          jq -r '.[] | "REACT_APP_\(.OutputKey)=\(.OutputValue)"' env-config.json > frontend/.env
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.18.0'
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          yarn install
+
+      - name: Prepare AWS credentials
+        run: |
+          mkdir ~/.aws
+          echo -e "[${AWS_PROFILE}]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
+          cat ~/.aws/credentials
+
+      - name: Check if S3 Bucket Exists
+        id: check-bucket
+        run: |
+          if aws s3 ls "s3://${WEBAPP_BUCKET}" 2>&1 | grep -q 'NoSuchBucket'; then
+            echo "BUCKET_EXISTS=false" >> $GITHUB_ENV
+          else
+            echo "BUCKET_EXISTS=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create S3 Bucket
+        if: env.BUCKET_EXISTS == 'false'
+        run: |
+          aws s3 mb s3://${WEBAPP_BUCKET}
+          aws s3api put-public-access-block --bucket ${WEBAPP_BUCKET} --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+          aws s3 website s3://${WEBAPP_BUCKET} --index-document index.html --error-document error.html
+          POLICY=$(echo '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::'${WEBAPP_BUCKET}'/*"
+              }
+            ]
+          }')
+          aws s3api put-bucket-policy --bucket ${WEBAPP_BUCKET} --policy "$POLICY"
+      - name: Build react app
+        run: |
+          cd frontend
+          yarn build
+      - name: Upload React App to S3
+        run: |
+          aws s3 sync frontend/build s3://${WEBAPP_BUCKET} --delete
