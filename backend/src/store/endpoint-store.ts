@@ -10,6 +10,13 @@ export class EndpointStore extends DynamoStoreRepository<EndpointModel> {
     return this.putAndGet(endpoint);
   };
 
+  getEndpoint = async (
+    ownerId: string,
+    endpointId: string
+  ): Promise<EndpointModel | null> => {
+    return this.get(ownerId, endpointId).exec();
+  };
+
   listEndpoints = async (ownerId: string): Promise<EndpointModel[]> => {
     return this.query().wherePartitionKey(ownerId).execFetchAll();
   };
@@ -24,5 +31,17 @@ export class EndpointStore extends DynamoStoreRepository<EndpointModel> {
     update: Partial<EndpointModel>
   ): Promise<EndpointModel> => {
     return this.updateByPartitionKeyAndSortKey(ownerId, endpointId, update);
+  };
+
+  deleteEndpoint = async (ownerId: string, endpointId: string): Promise<void> => {
+    await this.delete(ownerId, endpointId).exec();
+  };
+
+  deleteEndpoints = async (endpoints: EndpointModel[]): Promise<void> => {
+    if (endpoints.length === 0) {
+      return;
+    }
+
+    await this.batchDelete(endpoints);
   };
 }
