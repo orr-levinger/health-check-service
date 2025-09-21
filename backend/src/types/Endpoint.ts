@@ -11,7 +11,7 @@ export interface EndpointInterface {
   status: EndpointStatus;
   statusCode?: number;
   responseTimeMs?: number;
-  errorMessage?: string;
+  errorMessage?: string | null;
   lastCheckedAt?: string;
   statusSince?: string;
 }

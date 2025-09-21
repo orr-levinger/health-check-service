@@ -160,11 +160,16 @@ class EndpointService {
     const statusChanged = endpoint.status !== newStatus;
     const nowIso = new Date().toISOString();
 
+    const errorMessage =
+      checkResult.status === 'healthy'
+        ? null
+        : checkResult.errorMessage ?? null;
+
     const updatePayload: Partial<EndpointModel> = {
       status: newStatus,
       statusCode: checkResult.statusCode,
       responseTimeMs: checkResult.responseTimeMs,
-      errorMessage: checkResult.errorMessage,
+      errorMessage,
       lastCheckedAt: nowIso,
       statusSince: statusChanged ? nowIso : endpoint.statusSince,
     };
