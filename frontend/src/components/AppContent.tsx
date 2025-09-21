@@ -334,9 +334,9 @@ const AppContent = ({
                     <Input placeholder="e.g. billing" />
                   </Form.Item>
                   <Form.Item
-                    label="Key"
+                    label="Name"
                     name="name"
-                    rules={[{ required: true, message: 'Key is required' }]}
+                    rules={[{ required: true, message: 'Name is required' }]}
                   >
                     <Input placeholder="Friendly identifier" />
                   </Form.Item>
@@ -441,9 +441,9 @@ const AppContent = ({
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            label="Key"
+            label="Name"
             name="name"
-            rules={[{ required: true, message: 'Key is required', whitespace: true }]}
+            rules={[{ required: true, message: 'Name is required', whitespace: true }]}
           >
             <Input placeholder="Friendly identifier" />
           </Form.Item>
