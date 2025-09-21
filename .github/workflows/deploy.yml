@@ -20,6 +20,9 @@ on:
         description: 'Serverless stage/environment name'
         required: false
         default: dev
+  push:
+    branches:
+      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
