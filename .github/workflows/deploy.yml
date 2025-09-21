@@ -32,7 +32,7 @@ env:
   ENV_NAME: ${{ github.event.inputs.stage || 'dev' }}
 jobs:
   deploy-backend:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     environment:
       name: ${{ env.ENV_NAME }}
     env:
@@ -82,7 +82,7 @@ jobs:
           path: env-config.json
   deploy-frontend:
     needs: deploy-backend
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     environment:
       name: ${{ env.ENV_NAME }}
     env:
