@@ -175,6 +175,7 @@ const AppContent = ({
     loadEndpoints,
     addEndpoint,
     updateEndpoint,
+    deleteEndpoint,
     deleteTenant,
   } = useEndpoints();
   const [form] = Form.useForm<EndpointPayload & { timeoutMs?: number }>();
@@ -183,6 +184,7 @@ const AppContent = ({
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isUpdatingEndpoint, setIsUpdatingEndpoint] = useState(false);
   const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
+  const [deletingEndpointId, setDeletingEndpointId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadEndpoints();
@@ -256,6 +258,22 @@ const AppContent = ({
     }
   };
 
+  const handleDeleteEndpoint = async (endpoint: Endpoint) => {
+    setDeletingEndpointId(endpoint.endpointId);
+    try {
+      await deleteEndpoint(endpoint.endpointId);
+      message.success(`Deleted endpoint ${endpoint.name}`);
+
+      if (editingEndpoint?.endpointId === endpoint.endpointId) {
+        handleEditModalClose();
+      }
+    } catch (error) {
+      message.error('Failed to delete endpoint');
+    } finally {
+      setDeletingEndpointId(null);
+    }
+  };
+
   const onSubmit = async (values: EndpointPayload & { timeoutMs?: number }) => {
     try {
       await addEndpoint({
@@ -284,6 +302,27 @@ const AppContent = ({
         >
           Edit
         </Button>,
+        <Popconfirm
+          key={`delete-${endpoint.endpointId}`}
+          title="Delete endpoint"
+          description={`This will remove ${endpoint.name}.`}
+          okText="Delete"
+          cancelText="Cancel"
+          okButtonProps={{
+            danger: true,
+            loading: deletingEndpointId === endpoint.endpointId,
+          }}
+          onConfirm={() => handleDeleteEndpoint(endpoint)}
+        >
+          <Button
+            type="link"
+            danger
+            size="small"
+            loading={deletingEndpointId === endpoint.endpointId}
+          >
+            Delete
+          </Button>
+        </Popconfirm>,
       ]}
     >
       <List.Item.Meta
