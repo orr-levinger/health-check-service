@@ -89,6 +89,19 @@ const useEndpoints = () => {
     []
   );
 
+  const deleteEndpoint = useCallback(async (endpointId: string) => {
+    try {
+      await API.del(API_NAME, `${ENDPOINT_PATH}/${endpointId}`, {});
+
+      setEndpoints((prev) =>
+        sortEndpoints(prev.filter((endpoint) => endpoint.endpointId !== endpointId))
+      );
+    } catch (error) {
+      console.error('Error deleting endpoint:', error);
+      throw error;
+    }
+  }, []);
+
   const deleteTenant = useCallback(async (tenantId: string) => {
     try {
       const response: { deletedCount?: number } = await API.del(
@@ -115,6 +128,7 @@ const useEndpoints = () => {
     loadEndpoints,
     addEndpoint,
     updateEndpoint,
+    deleteEndpoint,
     deleteTenant,
   };
 };

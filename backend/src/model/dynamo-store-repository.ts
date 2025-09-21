@@ -42,9 +42,18 @@ export class DynamoStoreRepository<T extends BaseDynamoModel> extends DynamoStor
 
   private patch(updateWith: Partial<T>, updateRequest: UpdateRequest<T>) {
     for (const [attrKey, attrValue] of Object.entries(updateWith)) {
-      updateRequest = updateRequest
-        .updateAttribute(attrKey as keyof T)
-        .set(attrValue as T[keyof T]);
+      if (attrValue === undefined) {
+        continue;
+      }
+
+      const attribute = updateRequest.updateAttribute(attrKey as keyof T);
+
+      if (attrValue === null) {
+        updateRequest = attribute.remove();
+        continue;
+      }
+
+      updateRequest = attribute.set(attrValue as T[keyof T]);
     }
     updateRequest.updateAttribute('updatedAt').set(new Date().toISOString());
     return updateRequest.returnValues('ALL_NEW').exec();

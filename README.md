@@ -1,14 +1,14 @@
 # Uptime Monitoring Home Assignment
 
-This repository contains a lightweight uptime monitoring prototype built on top of the provided serverless template. It keeps the original deployment model (AWS Lambda, API Gateway, DynamoDB, Cognito, S3 hosted React frontend) while reshaping the product to manage multi-tenant health checks.
+This repository contains a lightweight uptime monitoring prototype. It runs on AWS Lambda, API Gateway, DynamoDB, Cognito, and an S3 hosted React frontend to manage multi-tenant health checks.
 
 ## Architecture decisions
 
-- **AWS Serverless Framework** – keeps deployment friction low while staying within the original template. Infrastructure as code is handled via the Serverless Framework so updates remain reproducible.
-- **Lambda + API Gateway** – each API endpoint is an AWS Lambda function that scales on demand and is protected by the existing Cognito authoriser. API Gateway continues to expose a single HTTPS endpoint for the frontend.
+- **AWS Serverless Framework** – defines infrastructure as code so deployments stay simple and repeatable.
+- **Lambda + API Gateway** – each API endpoint is an AWS Lambda function that scales on demand and is protected by the Cognito authoriser. API Gateway exposes a single HTTPS endpoint for the frontend.
 - **DynamoDB for state** – a single table (`${service}-${stage}-endpoints`) stores endpoint definitions and their most recent health state. Partitioning by the authenticated owner keeps requests scoped per customer administrator while allowing multiple tenants and categories per account.
 - **CheckEndpoint utility** – a reusable TypeScript helper (with Jest + Nock unit tests) encapsulates HTTP GET checks, timeout handling, non-2xx detection and network failures. Lambda handlers reuse it so behaviour is consistent across the system.
-- **React + Amplify UI** – the frontend is still a single page React app hosted on S3/CloudFront. It authenticates through Cognito, persists endpoints via the API and shows grouped health information using Ant Design components.
+- **React + Amplify UI** – the frontend is a single page React app hosted on S3. It authenticates through Cognito, persists endpoints via the API and shows grouped health information using Ant Design components.
 
 ## Product considerations & assumptions
 
@@ -19,7 +19,7 @@ This repository contains a lightweight uptime monitoring prototype built on top 
 - **Input validation** – timeout is optional and defaults to 5 seconds server-side. URLs are validated in the UI and backend to avoid malformed entries. Additional attributes (expected status codes, headers, auth strategies) were considered out of scope for the first pass.
 - **Ambiguities for follow-up**:
   - Notification rules (channels, schedules, suppression windows) need product definition.
-  - Retention of historical checks and reporting cadence is undefined.
+  - Retention of historical checks and reporting schedule is undefined.
   - Tenant ownership/role-based access is assumed to mirror Cognito users but likely needs refinement for shared operations teams.
 
 ## Repository layout
@@ -38,7 +38,7 @@ Key files:
 ## Local development
 
 1. Install dependencies inside each workspace (`npm install`).
-2. Configure the same environment variables as the original template (Cognito IDs and API endpoint).
+2. Configure environment variables for Cognito IDs and the API endpoint.
 3. Run the frontend with `npm start` inside `frontend/` for local development.
 
 ## Testing
@@ -104,7 +104,7 @@ As discussed in the zoom I made it "My Own" So I can showcase my way of thinking
 
 To run this project in your own AWS account, you should first fork this repository:
 
-1. Navigate to the original repository on GitHub.
+1. Navigate to this repository on GitHub.
 2. Click the "Fork" button in the top-right corner of the page.
 
 ### Prerequisites
