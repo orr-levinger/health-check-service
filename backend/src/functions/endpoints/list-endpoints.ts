@@ -1,8 +1,10 @@
 import { endpointService } from '@service/endpoint-service';
 import { httpError, httpResponse } from '@common/http-response';
+import { logLambdaEvent } from '@common/log-event';
 import { APIGatewayEvent } from 'aws-lambda';
 
 export const handler = async (event: APIGatewayEvent) => {
+  logLambdaEvent('Received list-endpoints request', event);
   try {
     const claims = event.requestContext.authorizer?.claims;
     const ownerId = claims?.sub;

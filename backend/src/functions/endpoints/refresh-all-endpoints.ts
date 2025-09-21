@@ -1,6 +1,9 @@
+import { logLambdaEvent } from '@common/log-event';
 import { endpointService } from '@service/endpoint-service';
+import { ScheduledEvent } from 'aws-lambda';
 
-export const handler = async () => {
+export const handler = async (event?: ScheduledEvent) => {
+  logLambdaEvent('Received refresh-all-endpoints event', event);
   try {
     const updatedEndpoints = await endpointService.refreshAllEndpoints();
     const unhealthyCount = updatedEndpoints.filter(
