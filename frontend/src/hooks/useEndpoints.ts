@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
 import { API } from 'aws-amplify';
-import { Endpoint, EndpointPayload } from '../types/Endpoint';
+import { Endpoint, EndpointPayload, EndpointUpdatePayload } from '../types/Endpoint';
 
 const API_NAME = 'UptimeMonitoringAPI';
 const ENDPOINT_PATH = '/monitoring/endpoints';
+const TENANTS_PATH = '/monitoring/tenants';
 
 const sortEndpoints = (items: Endpoint[]) => {
   return [...items].sort((a, b) => {
@@ -60,12 +61,61 @@ const useEndpoints = () => {
     [loadEndpoints]
   );
 
+  const updateEndpoint = useCallback(
+    async (endpointId: string, payload: EndpointUpdatePayload) => {
+      try {
+        const updatedEndpoint: Endpoint = await API.patch(
+          API_NAME,
+          `${ENDPOINT_PATH}/${endpointId}`,
+          {
+            body: payload,
+          }
+        );
+
+        setEndpoints((prev) =>
+          sortEndpoints(
+            prev.map((endpoint) =>
+              endpoint.endpointId === endpointId ? updatedEndpoint : endpoint
+            )
+          )
+        );
+
+        return updatedEndpoint;
+      } catch (error) {
+        console.error('Error updating endpoint:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  const deleteTenant = useCallback(async (tenantId: string) => {
+    try {
+      const response: { deletedCount?: number } = await API.del(
+        API_NAME,
+        `${TENANTS_PATH}/${tenantId}`,
+        {}
+      );
+
+      setEndpoints((prev) =>
+        sortEndpoints(prev.filter((endpoint) => endpoint.tenantId !== tenantId))
+      );
+
+      return response?.deletedCount ?? 0;
+    } catch (error) {
+      console.error('Error deleting tenant:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     endpoints,
     isLoading,
     isCreating,
     loadEndpoints,
     addEndpoint,
+    updateEndpoint,
+    deleteTenant,
   };
 };
 

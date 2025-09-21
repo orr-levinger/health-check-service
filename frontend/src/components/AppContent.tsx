@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Layout,
   Row,
@@ -9,6 +9,8 @@ import {
   Input,
   InputNumber,
   List,
+  Modal,
+  Popconfirm,
   Space,
   Tag,
   Typography,
@@ -166,8 +168,21 @@ const AppContent = ({
   signOut: ReturnType<typeof useAuthenticator>['signOut'];
   user: any;
 }) => {
-  const { endpoints, isLoading, isCreating, loadEndpoints, addEndpoint } = useEndpoints();
+  const {
+    endpoints,
+    isLoading,
+    isCreating,
+    loadEndpoints,
+    addEndpoint,
+    updateEndpoint,
+    deleteTenant,
+  } = useEndpoints();
   const [form] = Form.useForm<EndpointPayload & { timeoutMs?: number }>();
+  const [editForm] = Form.useForm<{ name: string; url: string }>();
+  const [editingEndpoint, setEditingEndpoint] = useState<Endpoint | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isUpdatingEndpoint, setIsUpdatingEndpoint] = useState(false);
+  const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
 
   useEffect(() => {
     loadEndpoints();
@@ -175,6 +190,64 @@ const AppContent = ({
   }, []);
 
   const groupedEndpoints = useMemo(() => groupByTenantAndCategory(endpoints), [endpoints]);
+
+  const startEditingEndpoint = (endpoint: Endpoint) => {
+    setEditingEndpoint(endpoint);
+    setIsEditModalVisible(true);
+    editForm.setFieldsValue({
+      name: endpoint.name,
+      url: endpoint.url,
+    });
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalVisible(false);
+    setEditingEndpoint(null);
+    editForm.resetFields();
+  };
+
+  const handleUpdateEndpoint = async () => {
+    if (!editingEndpoint) {
+      return;
+    }
+
+    try {
+      const values = await editForm.validateFields();
+      setIsUpdatingEndpoint(true);
+
+      await updateEndpoint(editingEndpoint.endpointId, {
+        name: values.name.trim(),
+        url: values.url.trim(),
+      });
+
+      message.success('Endpoint updated');
+      handleEditModalClose();
+    } catch (error: any) {
+      if (!error?.errorFields) {
+        message.error('Failed to update endpoint');
+      }
+    } finally {
+      setIsUpdatingEndpoint(false);
+    }
+  };
+
+  const handleDeleteTenant = async (tenantId: string) => {
+    setDeletingTenantId(tenantId);
+    try {
+      const deletedCount = await deleteTenant(tenantId);
+
+      if (deletedCount === 0) {
+        message.info('No endpoints found for this tenant');
+      } else {
+        const suffix = deletedCount === 1 ? '' : 's';
+        message.success(`Deleted ${deletedCount} endpoint${suffix} for tenant ${tenantId}`);
+      }
+    } catch (error) {
+      message.error('Failed to delete tenant');
+    } finally {
+      setDeletingTenantId(null);
+    }
+  };
 
   const onSubmit = async (values: EndpointPayload & { timeoutMs?: number }) => {
     try {
@@ -193,7 +266,19 @@ const AppContent = ({
   };
 
   const renderEndpoint = (endpoint: Endpoint) => (
-    <List.Item key={endpoint.endpointId}>
+    <List.Item
+      key={endpoint.endpointId}
+      actions={[
+        <Button
+          key={`edit-${endpoint.endpointId}`}
+          type="link"
+          size="small"
+          onClick={() => startEditingEndpoint(endpoint)}
+        >
+          Edit
+        </Button>,
+      ]}
+    >
       <List.Item.Meta
         title={
           <Space align="center" size="small">
@@ -293,7 +378,31 @@ const AppContent = ({
                   </Card>
                 ) : (
                   Array.from(groupedEndpoints.entries()).map(([tenantId, categories]) => (
-                    <Card key={tenantId} title={`Tenant: ${tenantId}`}>
+                    <Card
+                      key={tenantId}
+                      title={`Tenant: ${tenantId}`}
+                      extra={
+                        <Popconfirm
+                          title="Delete tenant"
+                          description="This will remove all endpoints for this tenant."
+                          okText="Delete"
+                          cancelText="Cancel"
+                          okButtonProps={{
+                            danger: true,
+                            loading: deletingTenantId === tenantId,
+                          }}
+                          onConfirm={() => handleDeleteTenant(tenantId)}
+                        >
+                          <Button
+                            danger
+                            size="small"
+                            loading={deletingTenantId === tenantId}
+                          >
+                            Delete tenant
+                          </Button>
+                        </Popconfirm>
+                      }
+                    >
                       {Array.from(categories.entries()).map(([category, categoryEndpoints]) => (
                         <Card
                           key={`${tenantId}-${category}`}
@@ -319,6 +428,41 @@ const AppContent = ({
       <Footer style={footerStyle}>
         <Text type="secondary">Uptime monitoring demo console</Text>
       </Footer>
+      <Modal
+        title={
+          editingEndpoint ? `Edit endpoint: ${editingEndpoint.name}` : 'Edit endpoint'
+        }
+        open={isEditModalVisible}
+        onCancel={handleEditModalClose}
+        onOk={handleUpdateEndpoint}
+        okText="Save"
+        confirmLoading={isUpdatingEndpoint}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            label="Key"
+            name="name"
+            rules={[{ required: true, message: 'Key is required', whitespace: true }]}
+          >
+            <Input placeholder="Friendly identifier" />
+          </Form.Item>
+          <Form.Item
+            label="URL"
+            name="url"
+            rules={[
+              { required: true, message: 'URL is required', whitespace: true },
+              {
+                type: 'url',
+                message: 'Enter a valid URL',
+                transform: (value) => (typeof value === 'string' ? value.trim() : value),
+              },
+            ]}
+          >
+            <Input placeholder="https://service.domain.com/health" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Layout>
   );
 };

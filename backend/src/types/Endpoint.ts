@@ -23,3 +23,9 @@ export type EndpointInput = {
   url: string;
   timeoutMs?: number;
 };
+
+export type EndpointUpdateInput = {
+  name?: string;
+  url?: string;
+  timeoutMs?: number;
+};

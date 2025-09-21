@@ -23,3 +23,9 @@ export type EndpointPayload = {
   url: string;
   timeoutMs?: number;
 };
+
+export type EndpointUpdatePayload = {
+  name?: string;
+  url?: string;
+  timeoutMs?: number;
+};

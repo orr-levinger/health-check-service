@@ -119,6 +119,35 @@ functions:
           - dynamodb:*
         Resource: !GetAtt CustomerEndpointsTable.Arn
 
+  updateEndpoint:
+    handler: src/functions/endpoints/update-endpoint.handler
+    events:
+      - http:
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+          path: monitoring/endpoints/{endpointId}
+          method: patch
+          cors: true
+          request:
+            schema:
+              application/json:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  url:
+                    type: string
+                  timeoutMs:
+                    type: integer
+                    minimum: 1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:*
+        Resource: !GetAtt CustomerEndpointsTable.Arn
+
   refreshAllEndpoints:
     handler: src/functions/endpoints/refresh-all-endpoints.handler
     events:
@@ -126,6 +155,23 @@ functions:
           name: ${self:custom.base}-refresh-endpoints
           description: Refresh endpoint status metadata
           rate: cron(0/5 * * * ? *)
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:*
+        Resource: !GetAtt CustomerEndpointsTable.Arn
+
+  deleteTenant:
+    handler: src/functions/tenants/delete-tenant.handler
+    events:
+      - http:
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+          path: monitoring/tenants/{tenantId}
+          method: delete
+          cors: true
     iamRoleStatements:
       - Effect: Allow
         Action:
