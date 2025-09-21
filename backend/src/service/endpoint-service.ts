@@ -58,17 +58,23 @@ class EndpointService {
     const statusChanged = endpoint.status !== newStatus;
     const nowIso = new Date().toISOString();
 
+    const updatePayload: Partial<EndpointModel> = {
+      status: newStatus,
+      statusCode: checkResult.statusCode,
+      responseTimeMs: checkResult.responseTimeMs,
+      errorMessage: checkResult.errorMessage,
+      lastCheckedAt: nowIso,
+      statusSince: statusChanged ? nowIso : endpoint.statusSince,
+    };
+
+    const sanitizedUpdatePayload = Object.fromEntries(
+      Object.entries(updatePayload).filter(([, value]) => value !== undefined)
+    ) as Partial<EndpointModel>;
+
     const updatedEndpoint = await this.endpointStore.updateEndpoint(
       endpoint.ownerId,
       endpoint.endpointId,
-      {
-        status: newStatus,
-        statusCode: checkResult.statusCode,
-        responseTimeMs: checkResult.responseTimeMs,
-        errorMessage: checkResult.errorMessage,
-        lastCheckedAt: nowIso,
-        statusSince: statusChanged ? nowIso : endpoint.statusSince,
-      }
+      sanitizedUpdatePayload
     );
 
     await this.notifyIfUnhealthy(updatedEndpoint, checkResult);
