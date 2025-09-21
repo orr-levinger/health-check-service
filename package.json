@@ -1,6 +1,6 @@
 {
   "name": "uptime-monitoring-home-assignment",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Monorepo for the uptime monitoring assignment demo",
   "main": "index.js",
   "keywords": [],
