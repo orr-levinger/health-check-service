@@ -15,7 +15,7 @@ const awsmobile = {
   API: {
     endpoints: [
       {
-        name: 'ZetsAPIGatewayAPI',
+        name: 'UptimeMonitoringAPI',
         endpoint: process.env.REACT_APP_ServiceEndpoint,
         custom_header: async () => {
           let authorization = `${(await Auth.currentSession()).getIdToken().getJwtToken()}`;

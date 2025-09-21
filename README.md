@@ -1,85 +1,53 @@
-# Zets Github Starts 
+# Uptime Monitoring Home Assignment
 
-### Architecture choices
-As discussed in the zoom I made it "My Own" So I can showcase my way of thinking and how I would approach this kind of task. 
-* serverless framework as my IaC to be able to update and redeploy changes easily.
-* Lambda for scalability and simplicity (Not having to manage Containers lifecycle)
-* API Gateway
-  * Fully managed makes it easy for developers to create, publish, maintain, monitor
-  * Secure APIs at any scale.
-  * Input schema validation capabilities.
-* Cognito and Amplify for authentication and authorisation
-  * Offers user interface
-  * Scalability and Security
-  * Simple Integration with AWS Services
-* S3 as the static website hosting
-  * Cost-Effective Hosting
-  * High Scalability and Availability
-  * Easy Deployment and Maintenance
-  * Simple to Update
-* For CI/CD i am using GitHub actions
-  * to streamline the deployment process so the BE and FE are updated automatically on every 'master' push.
+This repository contains a lightweight uptime monitoring prototype built on top of the provided serverless template. It keeps the original deployment model (AWS Lambda, API Gateway, DynamoDB, Cognito, S3 hosted React frontend) while reshaping the product to manage multi-tenant health checks.
 
-### Gaps and Nice to Haves
-* Static website hosting in s3
-  * currently it uses http protocol and not https. I would have set certificate to make it https
-* React:
-  * The code could be much cleaner and be split into smaller components and files.
-  * Could have used a modern state management and lifecycle tool like redux or react-query.
-  * Nicer layout with proper CSS
-  * Fetching by clicking the next page and not the NEXT button.
-* Saved repos are not automatically updated with the current number of stars (could be nice to implement)
-* CI/CD
-  * Could be nice to skip backend or frontend in no code was changed in either respectively
-  * Create env per PR for testing before merging to master
+## Architecture decisions
 
-### Fork the Repository
-To run this project in your own AWS account, you should first fork this repository:
+- **AWS Serverless Framework** – keeps deployment friction low while staying within the original template. Infrastructure as code is handled via the Serverless Framework so updates remain reproducible.
+- **Lambda + API Gateway** – each API endpoint is an AWS Lambda function that scales on demand and is protected by the existing Cognito authoriser. API Gateway continues to expose a single HTTPS endpoint for the frontend.
+- **DynamoDB for state** – a single table (`${service}-${stage}-endpoints`) stores endpoint definitions and their most recent health state. Partitioning by the authenticated owner keeps requests scoped per customer administrator while allowing multiple tenants and categories per account.
+- **CheckEndpoint utility** – a reusable TypeScript helper (with Jest + Nock unit tests) encapsulates HTTP GET checks, timeout handling, non-2xx detection and network failures. Lambda handlers reuse it so behaviour is consistent across the system.
+- **React + Amplify UI** – the frontend is still a single page React app hosted on S3/CloudFront. It authenticates through Cognito, persists endpoints via the API and shows grouped health information using Ant Design components.
 
-1. Navigate to the original repository on GitHub.
-2. Click the "Fork" button in the top-right corner of the page.
+## Product considerations & assumptions
 
-### Prerequisites
-- AWS Account
-- GitHub Account
+- **Multi-tenant data model** – each record captures a `tenantId`, `category`, friendly `name`, and target `url`. The authenticated user acts as the “owner” so different customers can be modelled by storing several tenants under a single account.
+- **Status evaluation** – the first iteration keeps checks synchronous: every time the list view loads (or refresh is pressed) the backend replays the `CheckEndpoint` function for all saved endpoints and stores the latest outcome (`status`, `statusCode`, `responseTimeMs`, `statusSince`, `lastCheckedAt`). A background scheduler would be the next evolution.
+- **Colour & duration cues** – the UI highlights health in green/red and displays how long the endpoint has been in the current state plus the time of the last probe. Unknown status indicates the endpoint has not been checked yet.
+- **Manual escalation** – automated paging/escalation flows are intentionally out of scope for the initial cut. The architecture section in this README calls out where SNS/Slack/Webhooks could later plug in once product requirements firm up.
+- **Input validation** – timeout is optional and defaults to 5 seconds server-side. URLs are validated in the UI and backend to avoid malformed entries. Additional attributes (expected status codes, headers, auth strategies) were considered out of scope for the first pass.
+- **Ambiguities for follow-up**:
+  - Notification rules (channels, schedules, suppression windows) need product definition.
+  - Retention of historical checks and reporting cadence is undefined.
+  - Tenant ownership/role-based access is assumed to mirror Cognito users but likely needs refinement for shared operations teams.
 
-## Setting up a Development Environment in GitHub
+## Repository layout
 
-To deploy and run the application in your own environment, you need to create a development environment in your forked GitHub repository and set up the required secrets.
+```
+backend/   # Serverless Lambda functions and DynamoDB access layer
+frontend/  # React + Amplify UI for managing and viewing endpoints
+```
 
-### Setup Environment Variables in GitHub
-1. In your GitHub repository, navigate to the "Settings" tab.
-2. On the left sidebar, click on "Environments".
-3. Click on "New environment" to create a new environment.
-4. Name the environment "dev" (or another name, but make sure it matches the environment name used in the GitHub Actions workflow).
-5. Click on "Configure environment".
+Key files:
 
-- **`AWS_ACCESS_KEY_ID`**
-    - **Description**: AWS IAM user access key ID with necessary permissions.
-    - **Type**: String
-    - **Required**: Yes
+- `backend/src/lib/check-endpoint.ts` – reusable HTTP checker.
+- `backend/__tests__/check-endpoint.test.ts` – Jest tests covering success, non-2xx, timeout, network error and invalid URL cases.
+- `frontend/src/components/AppContent.tsx` – main React view with endpoint form and grouped status cards.
 
-- **`AWS_SECRET_ACCESS_KEY`**
-    - **Description**: AWS IAM user secret access key.
-    - **Type**: Secret
-    - **Required**: Yes
+## Local development
 
-- **`WEBAPP_BUCKET`**
-    - **Description**: The name of the S3 bucket where the frontend will be deployed. (Must be unique)
-    - **Type**: String
-    - **Required**: Yes
+1. Install dependencies inside each workspace (`npm install`).
+2. Configure the same environment variables as the original template (Cognito IDs and API endpoint).
+3. Run the frontend with `npm start` inside `frontend/` for local development.
 
-### Creating a Secured Variable in AWS
-Create a secured variable in your AWS account called `zets-github-token` with your GitHub API token (In the same region as the stack).
+## Testing
 
-1. Navigate to the AWS Management Console.
-2. Go to the service that manages your secured variables (e.g., AWS SSM).
-3. Create a new secret with the key `zets-github-token` and set your GitHub token as the value.
+Run the backend unit tests for the `CheckEndpoint` helper:
 
-### Deploying the Application
-The application is deployed using GitHub Actions. The workflow is triggered on any push to the master branch or can be manually dispatched:
+```bash
+cd backend
+npm test
+```
 
-1. Push changes to the master branch or go to the 'Actions' tab in your GitHub repository.
-2. Select the 'Deploy Dev' workflow.
-3. Click 'Run workflow' to manually dispatch the workflow.
-4. The endpoit to access the APP will be under http://{WEBAPP_BUCKET}-dev.s3-website-us-east-1.amazonaws.com
+The frontend relies on manual verification for this assignment; the UI is intentionally kept minimal to reflect a 2–3 hour implementation window.
