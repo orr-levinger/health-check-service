@@ -2,6 +2,24 @@ name: Deploy Dev
 
 on:
   workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: 'AWS access key with permissions to deploy the stack'
+        required: true
+      aws_secret_access_key:
+        description: 'AWS secret access key matching the IAM user above'
+        required: true
+      webapp_bucket:
+        description: 'Unique S3 bucket name for hosting the React frontend'
+        required: true
+      aws_region:
+        description: 'AWS region to target (defaults to us-east-1)'
+        required: false
+        default: us-east-1
+      stage:
+        description: 'Serverless stage/environment name'
+        required: false
+        default: dev
   push:
     branches:
       - master
@@ -12,18 +30,18 @@ concurrency:
 
 env:
   AWS_PROFILE: default
-  ENV: dev
-  ENV_NAME: dev
+  AWS_DEFAULT_REGION: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+  ENV: ${{ github.event.inputs.stage || 'dev' }}
+  ENV_NAME: ${{ github.event.inputs.stage || 'dev' }}
 jobs:
   deploy-backend:
     runs-on: ubuntu-20.04
     environment:
-      name: dev
+      name: ${{ env.ENV_NAME }}
     env:
-      AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      AWS_ACCESS_KEY_ID: ${{ github.event.inputs.aws_access_key_id || vars.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ github.event.inputs.aws_secret_access_key || secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_EC2_METADATA_DISABLED: true
-      AWS_DEFAULT_REGION: us-east-1
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,7 +68,6 @@ jobs:
         run: |
           mkdir ~/.aws
           echo -e "[${AWS_PROFILE}]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
-          cat ~/.aws/credentials
 
       - name: Deploy backend environment
         run: |
@@ -70,13 +87,12 @@ jobs:
     needs: deploy-backend
     runs-on: ubuntu-20.04
     environment:
-      name: dev
+      name: ${{ env.ENV_NAME }}
     env:
-      AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
-      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      WEBAPP_BUCKET: ${{vars.WEBAPP_BUCKET}}
+      AWS_ACCESS_KEY_ID: ${{ github.event.inputs.aws_access_key_id || vars.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ github.event.inputs.aws_secret_access_key || secrets.AWS_SECRET_ACCESS_KEY }}
+      WEBAPP_BUCKET: ${{ github.event.inputs.webapp_bucket || vars.WEBAPP_BUCKET }}
       AWS_EC2_METADATA_DISABLED: true
-      AWS_DEFAULT_REGION: us-east-1
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -115,7 +131,6 @@ jobs:
         run: |
           mkdir ~/.aws
           echo -e "[${AWS_PROFILE}]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}\n" > ~/.aws/credentials
-          cat ~/.aws/credentials
 
       - name: Check if S3 Bucket Exists
         id: check-bucket
