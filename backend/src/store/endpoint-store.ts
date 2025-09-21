@@ -14,6 +14,10 @@ export class EndpointStore extends DynamoStoreRepository<EndpointModel> {
     return this.query().wherePartitionKey(ownerId).execFetchAll();
   };
 
+  listAllEndpoints = async (): Promise<EndpointModel[]> => {
+    return this.scan().execFetchAll();
+  };
+
   updateEndpoint = async (
     ownerId: string,
     endpointId: string,

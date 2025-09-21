@@ -2,7 +2,8 @@ import { randomUUID } from 'crypto';
 import { EndpointStore } from '@store/endpoint-store';
 import { EndpointModel } from '@model/endpoint-model';
 import { EndpointInput, EndpointStatus } from '@type/Endpoint';
-import { CheckEndpoint } from '@lib/check-endpoint';
+import { CheckEndpoint, CheckEndpointResult } from '@lib/check-endpoint';
+import { notificationService } from '@service/notification-service';
 
 class EndpointService {
   private endpointStore = new EndpointStore();
@@ -35,32 +36,55 @@ class EndpointService {
   refreshEndpoints = async (ownerId: string): Promise<EndpointModel[]> => {
     const endpoints = await this.endpointStore.listEndpoints(ownerId);
 
-    const updatedEndpoints = await Promise.all(
-      endpoints.map(async (endpoint) => {
-        const timeout = endpoint.timeoutMs ?? this.DEFAULT_TIMEOUT_MS;
-        const checkResult = await CheckEndpoint(endpoint.url, timeout);
-        const newStatus: EndpointStatus = checkResult.status;
-        const statusChanged = endpoint.status !== newStatus;
-        const nowIso = new Date().toISOString();
+    return Promise.all(
+      endpoints.map((endpoint) => this.refreshEndpointStatus(endpoint))
+    );
+  };
 
-        const updatedEndpoint = await this.endpointStore.updateEndpoint(
-          ownerId,
-          endpoint.endpointId,
-          {
-            status: newStatus,
-            statusCode: checkResult.statusCode,
-            responseTimeMs: checkResult.responseTimeMs,
-            errorMessage: checkResult.errorMessage,
-            lastCheckedAt: nowIso,
-            statusSince: statusChanged ? nowIso : endpoint.statusSince,
-          }
-        );
+  refreshAllEndpoints = async (): Promise<EndpointModel[]> => {
+    const endpoints = await this.endpointStore.listAllEndpoints();
 
-        return updatedEndpoint;
-      })
+    return Promise.all(
+      endpoints.map((endpoint) => this.refreshEndpointStatus(endpoint))
+    );
+  };
+
+  private refreshEndpointStatus = async (
+    endpoint: EndpointModel
+  ): Promise<EndpointModel> => {
+    const timeout = endpoint.timeoutMs ?? this.DEFAULT_TIMEOUT_MS;
+    const checkResult = await CheckEndpoint(endpoint.url, timeout);
+    const newStatus: EndpointStatus = checkResult.status;
+    const statusChanged = endpoint.status !== newStatus;
+    const nowIso = new Date().toISOString();
+
+    const updatedEndpoint = await this.endpointStore.updateEndpoint(
+      endpoint.ownerId,
+      endpoint.endpointId,
+      {
+        status: newStatus,
+        statusCode: checkResult.statusCode,
+        responseTimeMs: checkResult.responseTimeMs,
+        errorMessage: checkResult.errorMessage,
+        lastCheckedAt: nowIso,
+        statusSince: statusChanged ? nowIso : endpoint.statusSince,
+      }
     );
 
-    return updatedEndpoints;
+    await this.notifyIfUnhealthy(updatedEndpoint, checkResult);
+
+    return updatedEndpoint;
+  };
+
+  private notifyIfUnhealthy = async (
+    endpoint: EndpointModel,
+    checkResult: CheckEndpointResult
+  ) => {
+    if (checkResult.status !== 'unhealthy') {
+      return;
+    }
+
+    await notificationService.notifyEndpointIssue(endpoint, checkResult);
   };
 }
 
