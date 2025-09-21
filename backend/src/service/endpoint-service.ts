@@ -101,6 +101,35 @@ class EndpointService {
     return this.endpointStore.updateEndpoint(ownerId, endpointId, sanitizedUpdate);
   };
 
+  deleteEndpoint = async (ownerId: string, endpointId: string): Promise<void> => {
+    if (!endpointId) {
+      const error = new Error('endpointId is required');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+
+    const normalizedEndpointId = endpointId.trim();
+
+    if (!normalizedEndpointId) {
+      const error = new Error('endpointId cannot be empty');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+
+    const existingEndpoint = await this.endpointStore.getEndpoint(
+      ownerId,
+      normalizedEndpointId
+    );
+
+    if (!existingEndpoint) {
+      const error = new Error('Endpoint not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    await this.endpointStore.deleteEndpoint(ownerId, normalizedEndpointId);
+  };
+
   listEndpoints = async (ownerId: string): Promise<EndpointModel[]> => {
     return this.endpointStore.listEndpoints(ownerId);
   };
@@ -183,6 +212,10 @@ class EndpointService {
       endpoint.endpointId,
       sanitizedUpdatePayload
     );
+
+    if (errorMessage === null) {
+      updatedEndpoint.errorMessage = null;
+    }
 
     await this.notifyIfUnhealthy(updatedEndpoint, checkResult);
 
