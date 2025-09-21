@@ -119,6 +119,19 @@ functions:
           - dynamodb:*
         Resource: !GetAtt CustomerEndpointsTable.Arn
 
+  refreshAllEndpoints:
+    handler: src/functions/endpoints/refresh-all-endpoints.handler
+    events:
+      - schedule:
+          name: ${self:custom.base}-refresh-endpoints
+          description: Refresh endpoint status metadata
+          rate: cron(0/5 * * * ? *)
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:*
+        Resource: !GetAtt CustomerEndpointsTable.Arn
+
 resources:
   - ${file(resources/cognito-user-pool.yml)}
   - ${file(resources/dynamodb-tables.yml)}
