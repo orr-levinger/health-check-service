@@ -52,6 +52,16 @@ npm test
 
 The frontend relies on manual verification for this assignment; the UI is intentionally kept minimal to reflect a 2–3 hour implementation window.
 
+## QA health check endpoint
+
+The deployment also exposes a public `/health-qa` Lambda that intentionally returns a mix of fast successes, slow responses, 4xx/5xx errors, redirects, and even simulated timeouts/exceptions. It is meant for validating that monitoring or alerting rules react correctly to unpredictable behaviour.
+
+To exercise it after deploying the stack:
+
+1. Capture the base URL of the API Gateway stage. You can run `npx serverless info --stage <stage>` from the `backend/` folder or open the API in the AWS console to copy the base invoke URL (for example `https://abc123.execute-api.us-east-1.amazonaws.com/dev`).
+2. Append `/health-qa` to that base URL to form the full endpoint (for example `https://abc123.execute-api.us-east-1.amazonaws.com/dev/health-qa`).
+3. Call the URL from your browser or using a tool like `curl`/Postman to observe the randomly selected scenario on each request.
+
 ## Deployment & operations
 
 ### Architecture choices
