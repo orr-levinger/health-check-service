@@ -148,6 +148,23 @@ functions:
           - dynamodb:*
         Resource: !GetAtt CustomerEndpointsTable.Arn
 
+  deleteEndpoint:
+    handler: src/functions/endpoints/delete-endpoint.handler
+    events:
+      - http:
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+          path: monitoring/endpoints/{endpointId}
+          method: delete
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:*
+        Resource: !GetAtt CustomerEndpointsTable.Arn
+
   refreshAllEndpoints:
     handler: src/functions/endpoints/refresh-all-endpoints.handler
     events:
