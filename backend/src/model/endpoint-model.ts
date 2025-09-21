@@ -19,7 +19,7 @@ export class EndpointModel extends BaseDynamoModel implements EndpointInterface 
   status: EndpointInterface['status'];
   statusCode?: number;
   responseTimeMs?: number;
-  errorMessage?: string;
+  errorMessage?: string | null;
   lastCheckedAt?: string;
   statusSince?: string;
 }
