@@ -178,6 +178,14 @@ functions:
           - dynamodb:*
         Resource: !GetAtt CustomerEndpointsTable.Arn
 
+  healthQa:
+    handler: src/functions/health-qa.handler
+    events:
+      - http:
+          path: health-qa
+          method: get
+          cors: true
+
 resources:
   - ${file(resources/cognito-user-pool.yml)}
   - ${file(resources/dynamodb-tables.yml)}

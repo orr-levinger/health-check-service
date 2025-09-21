@@ -185,9 +185,16 @@ const AppContent = ({
   const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadEndpoints();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void loadEndpoints();
+
+    const intervalId = window.setInterval(() => {
+      void loadEndpoints();
+    }, 30_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadEndpoints]);
 
   const groupedEndpoints = useMemo(() => groupByTenantAndCategory(endpoints), [endpoints]);
 
