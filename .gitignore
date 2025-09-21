@@ -8,3 +8,4 @@
 .stack-outputs
 # Ignore serverless manifest files
 serverless.manifest.json
+.DS_Store

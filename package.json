@@ -1,12 +1,12 @@
 {
-  "name": "zets-hithub-stars",
+  "name": "uptime-monitoring-home-assignment",
   "version": "1.0.0",
-  "description": "",
+  "description": "Monorepo for the uptime monitoring assignment demo",
   "main": "index.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "homepage": "https://github.com/orr-levinger/zets-github-stars/README.md",
+  "homepage": "https://github.com/example/uptime-monitoring-home-assignment",
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.1.6",
