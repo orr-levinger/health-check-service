@@ -187,10 +187,10 @@ const AppContent = ({
   const [deletingEndpointId, setDeletingEndpointId] = useState<string | null>(null);
 
   useEffect(() => {
-    void loadEndpoints();
+    void loadEndpoints(false);
 
     const intervalId = window.setInterval(() => {
-      void loadEndpoints();
+      void loadEndpoints(false);
     }, 30_000);
 
     return () => {
