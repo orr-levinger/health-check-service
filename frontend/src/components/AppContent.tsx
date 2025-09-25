@@ -165,7 +165,7 @@ const AppContent = ({
   signOut,
   user,
 }: {
-  signOut: ReturnType<typeof useAuthenticator>['signOut'];
+  signOut?: ReturnType<typeof useAuthenticator>['signOut'];
   user: any;
 }) => {
   const {
@@ -355,7 +355,7 @@ const AppContent = ({
             </Title>
           </Col>
           <Col>
-            <Button onClick={signOut}>Sign Out</Button>
+            <Button onClick={signOut || undefined}>Sign Out</Button>
           </Col>
         </Row>
       </Header>
