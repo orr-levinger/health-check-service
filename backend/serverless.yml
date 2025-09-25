@@ -109,10 +109,6 @@ functions:
           path: monitoring/endpoints
           method: get
           cors: true
-          request:
-            parameters:
-              querystrings:
-                refresh: false
     iamRoleStatements:
       - Effect: Allow
         Action:
