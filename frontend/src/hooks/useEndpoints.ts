@@ -27,7 +27,7 @@ const useEndpoints = () => {
     async (refresh = true) => {
       setIsLoading(true);
       try {
-        const query = refresh ? '' : '?refresh=false';
+        const query = refresh ? '?refresh=true' : '';
         const response: Endpoint[] = await API.get(
           API_NAME,
           `${ENDPOINT_PATH}${query}`,

@@ -14,7 +14,7 @@ export const handler = async (event: APIGatewayEvent) => {
     }
 
     const refreshParam = event.queryStringParameters?.refresh;
-    const shouldRefresh = refreshParam !== 'false';
+    const shouldRefresh = refreshParam === 'true';
 
     const endpoints = shouldRefresh
       ? await endpointService.refreshEndpoints(ownerId)
